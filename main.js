@@ -227,6 +227,13 @@ function setupAutoUpdater() {
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.allowPrerelease = false;
+    
+    autoUpdater.setFeedURL({
+        provider: 'github',
+        owner: 'titanbound',
+        repo: 'core-home-hydrogen',
+        private: false
+    });
 
     autoUpdater.checkForUpdatesAndNotify();
 
@@ -239,7 +246,10 @@ function setupAutoUpdater() {
     });
 
     autoUpdater.on('error', (error) => {
-        dialog.showErrorBox('Error', 'Update failed: ' + error);
+        console.error('Update error:', error);
+        if (!error.message.includes('app-update.yml')) {
+            dialog.showErrorBox('Error', 'Update failed: ' + error);
+        }
     });
 }
 
@@ -299,7 +309,7 @@ function saveScript(content) {
 
 let cachedPort = null;
 let lastPortCheck = 0;
-const PORT_CACHE_DURATION = 5000; // Cache port for 5 seconds
+const PORT_CACHE_DURATION = 5000; 
 
 async function findServerPort() {
     const now = Date.now();
@@ -347,7 +357,6 @@ async function executeScript(code) {
 
 async function handleScriptExecution(event, script) {
     if (isExecuting) {
-        // Instead of queuing, reject if already executing
         return "Execution in progress. Please wait.";
     }
 
