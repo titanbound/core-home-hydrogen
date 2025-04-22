@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core: Home</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ext-language_tools.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="styles/main.css">
+    <script src="js/editor.js"></script>
+    <script src="js/tabs.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/toolbar.js"></script>
+    <script src="js/main.js"></script>
+  </head>
+  <body>
+    <div class="drag tab-bar">
+      <div class="no-drag tab active" data-tab-id="tab1">
+        <div class="no-drag tab-content">
+          <span class="no-drag tab-title">untitled.lua</span>
+          <span class="no-drag tab-close">&times;</span>
+          <!-- Add close button -->
+        </div>
+      </div>
+      <div class="no-drag tab-add">+</div>
+    </div>
+    <div id="editor-container">
+      <div id="editor1" class="no-drag editor active" data-tab-id="tab1"></div>
+      <div id="toolbar" class="toolbar">
+        <div class="toolbar-background"></div>
+        <a class="link" id="execute-btn">
+          <span class="link-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play">
+              <polygon points="6 3 20 12 6 21 6 3" />
+            </svg>
+          </span>
+          <span class="link-title">Execute</span>
+        </a>
+        <a class="link" id="settings-btn">
+          <span class="link-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings-2">
+              <path d="M20 7h-9" />
+              <path d="M14 17H5" />
+              <circle cx="17" cy="17" r="3" />
+              <circle cx="7" cy="7" r="3" />
+            </svg>
+          </span>
+          <span class="link-title">Settings</span>
+        </a>
+        <a class="link" id="save-btn">
+          <span class="link-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder-sync">
+              <path d="M9 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v.5" />
+              <path d="M12 10v4h4" />
+              <path d="m12 14 1.535-1.605a5 5 0 0 1 8 1.5" />
+              <path d="M22 22v-4h-4" />
+              <path d="m22 18-1.535 1.605a5 5 0 0 1-8-1.5" />
+            </svg>
+          </span>
+          <span class="link-title">Save</span>
+        </a>
+        <a class="link" id="ai-window-btn">
+          <span class="link-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bot-icon lucide-bot">
+              <path d="M12 8V4H8" />
+              <rect width="16" height="12" x="4" y="8" rx="2" />
+              <path d="M2 14h2" />
+              <path d="M20 14h2" />
+              <path d="M15 13v2" />
+              <path d="M9 13v2" />
+            </svg>
+          </span>
+          <span class="link-title">Intelligence</span>
+        </a>
+      </div>
+      <style>
+        .toolbar {
+          position: fixed;
+          bottom: 10px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          gap: 10px;
+          z-index: 1000;
+          padding: 10px;
+          cursor: move;
+          user-select: none;
+        }
+
+        .toolbar-background {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: #171717;
+          border-radius: 12px;
+          backdrop-filter: blur(8px);
+          z-index: -1;
+        }
+
+        .link {
+          position: relative;
+          z-index: 1001;
+          cursor: pointer;
+          -webkit-app-region: no-drag;
+        }
+      </style>
+    </div>
+    <div id="settings-popup" class="settings-popup">
+      <div class="settings-content">
+        <h3 style="color: #fff; border-bottom: 1px solid #444; padding-bottom: 10px;">Settings</h3>
+        <div class="theme-selector">
+          <label for="theme-toggle" style="color: #bbb;">Select Theme</label>
+          <select id="theme-toggle" style="background-color: #333; color: #fff; border: none; padding: 5px;">
+            <option value="dark">Dark Theme</option>
+            <option value="light">Light Theme</option>
+          </select>
+        </div>
+        <div class="discord-rpc">
+          <label for="discord-rpc" style="color: #bbb;">Enable Discord RPC</label>
+          <input type="checkbox" id="discord-rpc" style="accent-color: #555;">
+        </div>
+        <button id="close-settings" style="width: 100%; padding: 10px; background-color: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; margin-top: 15px;">Close</button>
+      </div>
+    </div>
+    <ul class="notification-container" id="notifications"></ul>
+  </body>
+</html>
