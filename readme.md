@@ -57,7 +57,7 @@ The built application will be available in the `out` directory.
 The application creates a workspace directory at:
 `~/Documents/Core Workspace/Saved\ Executions`
 
-This directory stores all auto-saved Lua scripts.
+This directory stores all saved Lua scripts.
 
 ## Configuration
 
