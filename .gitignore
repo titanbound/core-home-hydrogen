@@ -3,9 +3,7 @@ node_modules/
 package-lock.json
 
 # Build output
-dist/
 out/
-build/
 
 # macOS system files
 .DS_Store

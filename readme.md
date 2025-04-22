@@ -41,7 +41,7 @@ To build the application:
 npm run build
 ```
 
-The built application will be available in the `dist` directory.
+The built application will be available in the `out` directory.
 
 ## Features
 
@@ -55,9 +55,9 @@ The built application will be available in the `dist` directory.
 ## Workspace
 
 The application creates a workspace directory at:
-`~/Documents/Core Workspace/Auto Save`
+`~/Documents/Core Workspace/Saved\ Executions`
 
-This directory stores all auto-saved Lua scripts.
+This directory stores all saved Lua scripts.
 
 ## Configuration
 
@@ -71,7 +71,7 @@ The application automatically handles:
 If you encounter issues:
 
 1. Check Discord is running (for RPC features)
-2. Ensure ports 6969-7069 are available
+2. Ensure ports 6969-7069 are available for Hydrogen.
 3. Verify write permissions in Documents folder
 4. Check internet connection for AI features
 
