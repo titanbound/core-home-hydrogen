@@ -1,119 +1,39 @@
-// CORE: HOME: HYDROGEN - made by titanbound, if you see this your a skid. But, I dont really care either ways, since that means my product is being used. Thanks!
+// CORE: HOME - made by titanbound. P.S, I most DEFINITELY took Jad's auto-update + I stole the console off of him. Thanks JadXV, Your UI's are amazing, but backend is even more!
+
+
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const DiscordRPC = require('discord-rpc');
-const { autoUpdater } = require('electron-updater');
 const axios = require('axios');
-const semver = require('semver');
 const fetch = require('node-fetch');
+const { checkForUpdates } = require('./update');
+const { spawn } = require('child_process');
 const os = require('os');
-const { exec } = require('child_process');
-const https = require('https');
 
-// Global Variables
 let mainWindow;
 let rpcClient;
 let isExecuting = false;
 let pendingExecution = null;
+let robloxLogWindow = null;
+let logMonitoringInterval = null;
+let isMonitoringLogs = false;
 
-const START_PORT = 6969;
-const END_PORT = 7069;
-
-// Constants
 const workspacePath = path.join(app.getPath('documents'), 'Core Workspace', 'Saved Executions');
 const html = path.join(__dirname, 'src', 'index.html');
 const aihtml = path.join(__dirname, 'src', 'ai.html');
+const robloxLogHtml = path.join(__dirname, 'src', 'roblox-log.html');
 
-const LUAU_LSP_REPO = 'JohnnyMorganz/luau-lsp';
-const LUAU_LSP_PATH = path.join(app.getPath('userData'), 'bin', 'luau-lsp');
-
-// Initialization
-
-async function updateLuauLSP() {
-    try {
-        const response = await axios.get(`https://api.github.com/repos/${LUAU_LSP_REPO}/releases/latest`);
-        const release = response.data;
-        
-        const macAsset = release.assets.find(asset => asset.name === 'luau-lsp-macos.zip');
-        if (!macAsset) {
-            throw new Error('macOS binary not found in latest release');
-        }
-
-        const binDir = path.dirname(LUAU_LSP_PATH);
-        if (!fs.existsSync(binDir)) {
-            fs.mkdirSync(binDir, { recursive: true });
-        }
-
-        const zipPath = path.join(binDir, 'luau-lsp-macos.zip');
-        const writer = fs.createWriteStream(zipPath);
-
-        const downloadResponse = await axios({
-            url: macAsset.browser_download_url,
-            method: 'GET',
-            responseType: 'stream'
-        });
-
-        downloadResponse.data.pipe(writer);
-
-        await new Promise((resolve, reject) => {
-            writer.on('finish', resolve);
-            writer.on('error', reject);
-        });
-
-        await new Promise((resolve, reject) => {
-            exec(`unzip -o "${zipPath}" -d "${binDir}"`, (error) => {
-                if (error) reject(error);
-                else {
-                    fs.chmodSync(LUAU_LSP_PATH, '755');
-                    fs.unlinkSync(zipPath);
-                    resolve();
-                }
-            });
-        });
-
-        return { success: true, version: release.tag_name };
-    } catch (error) {
-        console.error('Failed to update Luau LSP:', error);
-        throw error;
-    }
+if (!fs.existsSync(workspacePath)) {
+    fs.mkdirSync(workspacePath, { recursive: true });
 }
 
-function initialize() {
-    if (!fs.existsSync(workspacePath)) {
-        fs.mkdirSync(workspacePath, { recursive: true });
-    }
-
-    app.whenReady().then(async () => {
-        try {
-            await updateLuauLSP();
-        } catch (error) {
-            console.error('Failed to update Luau LSP:', error);
-        }
-        createWindow();
-        checkAndStartDiscordRPC();
-        
-        app.on('activate', () => {
-            if (BrowserWindow.getAllWindows().length === 0) {
-                createWindow();
-            }
-        });
-    });
-
-    app.on('window-all-closed', () => {
-        if (process.platform !== 'darwin') {
-            app.quit();
-        }
-    });
-}
-
-// Window Management
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1000,
         height: 600,
         frame: false,
-        show: false,
+        show: false, 
         webPreferences: {
             contextIsolation: true,
             enableRemoteModule: false,
@@ -121,19 +41,45 @@ function createWindow() {
             devTools: true,
             preload: path.join(__dirname, 'preload.js'),
             webSecurity: true,
-            backgroundThrottling: false
+            backgroundThrottling: false 
         },
     });
 
-    setupSecurityHeaders();
-    setupWindowEvents();
+    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+        callback({
+            responseHeaders: {
+                ...details.responseHeaders,
+                'Content-Security-Policy': [
+                    "default-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ https://unpkg.com/ https://fonts.googleapis.com/ https://fonts.gstatic.com/ https://generativelanguage.googleapis.com/; " +
+                    "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/ https://unpkg.com/; " +
+                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/; " +
+                    "img-src 'self' data:; " +
+                    "font-src 'self' https://fonts.gstatic.com/; " +
+                    "connect-src 'self' https://generativelanguage.googleapis.com/; " +
+                    "frame-src 'self'"
+                ]
+            }
+        });
+    });
+
+    mainWindow.loadFile(html);
+    
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show();
+        mainWindow.focus();
+    });
+
+    mainWindow.on('close', (event) => {
+        mainWindow.webContents.send('request-save');
+        app.quit();
+    });
 }
 
 function createAIWindow() {
     const aiWin = new BrowserWindow({
         width: 1000,
         height: 600,
-        frame: false,
+        frame: false, 
         devTools: false,
         webPreferences: {
             contextIsolation: true,
@@ -144,46 +90,6 @@ function createAIWindow() {
     aiWin.loadFile(aihtml);
 }
 
-function setupSecurityHeaders() {
-    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-        callback({
-            responseHeaders: {
-                ...details.responseHeaders,
-                'Content-Security-Policy': [
-                    "default-src 'self' https://cdnjs.cloudflare.com/ajax/libs/ https://unpkg.com/; " +
-                    "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/ https://unpkg.com/; " +
-                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/; " +
-                    "font-src 'self' https://fonts.gstatic.com/; " +
-                    "img-src 'self' data: https://fonts.gstatic.com/; " +
-                    "connect-src 'self' https://generativelanguage.googleapis.com/; " +
-                    "frame-src 'self'; " +
-                    "worker-src 'self' blob:; " +
-                    "child-src 'self' blob:"      
-                ]
-            }
-        });
-    });
-}
-
-function setupWindowEvents() {
-    mainWindow.loadFile(html);
-    
-    mainWindow.once('ready-to-show', () => {
-        mainWindow.show();
-        mainWindow.focus();
-    });
-
-    mainWindow.webContents.on('did-finish-load', () => {
-        checkForUpdates(true);
-    });
-
-    mainWindow.on('close', () => {
-        mainWindow.webContents.send('request-save');
-        app.quit();
-    });
-}
-
-// Discord RPC
 function startDiscordRPC() {
     rpcClient = new DiscordRPC.Client({ transport: 'ipc' });
     rpcClient.on('ready', () => {
@@ -222,77 +128,6 @@ function checkAndStartDiscordRPC() {
     }
 }
 
-// Auto Updates
-function setupAutoUpdater() {
-    autoUpdater.autoDownload = true;
-    autoUpdater.autoInstallOnAppQuit = true;
-    autoUpdater.allowPrerelease = false;
-    
-    autoUpdater.setFeedURL({
-        provider: 'github',
-        owner: 'titanbound',
-        repo: 'core-home-hydrogen',
-        private: false
-    });
-
-    autoUpdater.checkForUpdatesAndNotify();
-
-    autoUpdater.on('update-available', (info) => {
-        console.log('Update available', info.version);
-    });
-
-    autoUpdater.on('update-downloaded', (info) => {
-        handleUpdateDownloaded();
-    });
-
-    autoUpdater.on('error', (error) => {
-        console.error('Update error:', error);
-        if (!error.message.includes('app-update.yml')) {
-            dialog.showErrorBox('Error', 'Update failed: ' + error);
-        }
-    });
-}
-
-function handleUpdateDownloaded() {
-    dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: 'Update Ready',
-        message: 'Install and restart now?',
-        buttons: ['Yes', 'Later']
-    }).then((result) => {
-        if (result.response === 0) {
-            autoUpdater.quitAndInstall();
-        }
-    });
-}
-
-async function checkForUpdates(silent = false) {
-    try {
-        const currentVersion = app.getVersion();
-        const response = await axios.get('https://api.github.com/repos/titanbound/core-home-hydrogen/releases/latest');
-        
-        if (!response.data || !response.data.tag_name) {
-            handleNoUpdates(silent);
-            return;
-        }
-        
-        const latestVersion = response.data.tag_name.replace('v', '');
-        
-        if (semver.gt(latestVersion, currentVersion)) {
-            await handleNewVersion(latestVersion, currentVersion, response.data);
-        } else if (!silent) {
-            await dialog.showMessageBox(mainWindow, {
-                type: 'info',
-                title: 'No Updates',
-                message: 'You are running the latest version.'
-            });
-        }
-    } catch (error) {
-        handleUpdateError(error, silent);
-    }
-}
-
-// Script Management
 function getNextSaveFilename() {
     const files = fs.readdirSync(workspacePath).filter(f => f.startsWith('save-') && f.endsWith('.lua'));
     const numbers = files.map(f => parseInt(f.match(/save-(\d+)\.lua/)[1], 10) || 0);
@@ -307,38 +142,34 @@ function saveScript(content) {
     console.log(`Saved: ${filePath}`);
 }
 
-let cachedPort = null;
-let lastPortCheck = 0;
-const PORT_CACHE_DURATION = 5000; 
-
-async function findServerPort() {
-    const now = Date.now();
-    if (cachedPort && (now - lastPortCheck) < PORT_CACHE_DURATION) {
-        return cachedPort;
+async function executeScript(code) {
+    if (!code) {
+        return "No valid script to execute.";
     }
 
+    const START_PORT = 6969;
+    const END_PORT = 7069;
+    let serverPort = null;
+    let lastError = '';
+    
     for (let port = START_PORT; port <= END_PORT; port++) {
         try {
             const res = await fetch(`http://127.0.0.1:${port}/secret`, {
                 method: 'GET'
             });
             if (res.ok && await res.text() === '0xdeadbeef') {
-                cachedPort = port;
-                lastPortCheck = now;
-                return port;
+                serverPort = port;
+                break;
             }
         } catch (e) {
-            continue;
+            lastError = e.message;
         }
     }
-    throw new Error(`Could not locate HTTP server on ports ${START_PORT}-${END_PORT}`);
-}
-
-async function executeScript(code) {
-    if (!code) return "No valid script to execute.";
-
-    const serverPort = await findServerPort();
     
+    if (!serverPort) {
+        throw new Error(`Could not locate HTTP server on ports ${START_PORT}-${END_PORT}. Last error: ${lastError}`);
+    }
+
     const response = await fetch(`http://127.0.0.1:${serverPort}/execute`, {
         method: 'POST',
         headers: {
@@ -355,49 +186,204 @@ async function executeScript(code) {
     return await response.text();
 }
 
-async function handleScriptExecution(event, script) {
-    if (isExecuting) {
-        return "Execution in progress. Please wait.";
+function createRobloxLogWindow() {
+    if (robloxLogWindow) {
+        robloxLogWindow.focus();
+        return;
     }
 
-    isExecuting = true;
+    robloxLogWindow = new BrowserWindow({
+        width: 500,
+        height: 300,
+        frame: false,
+        webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false,
+            preload: path.join(__dirname, 'preload.js'),
+        },
+    });
+
+    robloxLogWindow.loadFile(robloxLogHtml);
+
+    robloxLogWindow.on('closed', () => {
+        robloxLogWindow = null;
+        if (isMonitoringLogs) {
+            stopRobloxLogMonitoring();
+        }
+    });
+}
+
+function startRobloxLogMonitoring() {
+    if (isMonitoringLogs) {
+        stopRobloxLogMonitoring();
+    }
     
-    try {
-        const result = await executeScript(script);
-        return result;
-    } catch (error) {
-        console.error("Script execution failed:", error);
-        return `Execution failed: ${error.message}`;
-    } finally {
-        isExecuting = false;
+    isMonitoringLogs = true;
+    
+    const logDir = path.join(os.homedir(), 'Library/Logs/Roblox');
+    
+    if (!fs.existsSync(logDir)) {
+        if (robloxLogWindow) {
+            robloxLogWindow.webContents.send('roblox-log', {
+                message: `Roblox logs directory not found: ${logDir}`
+            });
+        }
+        return `Error: Roblox logs directory not found: ${logDir}`;
     }
+    
+    let currentLogFile = null;
+    let fileSize = 0;
+    
+    logMonitoringInterval = setInterval(() => {
+        try {
+            const files = fs.readdirSync(logDir)
+                .filter(f => fs.statSync(path.join(logDir, f)).isFile())
+                .map(f => ({
+                    path: path.join(logDir, f),
+                    mtime: fs.statSync(path.join(logDir, f)).mtime.getTime()
+                }))
+                .sort((a, b) => b.mtime - a.mtime);
+            
+            if (files.length > 0) {
+                const latestLogFile = files[0].path;
+                
+                if (latestLogFile !== currentLogFile) {
+                    currentLogFile = latestLogFile;
+                    fileSize = 0;
+                }
+                
+                if (currentLogFile) {
+                    const currentSize = fs.statSync(currentLogFile).size;
+                    
+                    if (currentSize > fileSize) {
+                        const buffer = Buffer.alloc(currentSize - fileSize);
+                        const fd = fs.openSync(currentLogFile, 'r');
+                        
+                        fs.readSync(fd, buffer, 0, buffer.length, fileSize);
+                        fs.closeSync(fd);
+                        
+                        const newContent = buffer.toString('utf8');
+                        fileSize = currentSize;
+                        
+                        newContent.split(/\r?\n/).forEach(line => {
+                            if (line.trim()) {
+                                const cleanedLine = cleanLogLine(line);
+                                if (cleanedLine && robloxLogWindow && !shouldFilter(cleanedLine)) {
+                                    robloxLogWindow.webContents.send('roblox-log', { 
+                                        message: cleanedLine,
+                                        noTimestamp: true
+                                    });
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error monitoring logs:', error);
+            if (robloxLogWindow) {
+                robloxLogWindow.webContents.send('roblox-log', {
+                    message: `Error: ${error.message}`
+                });
+            }
+        }
+    }, 500);
+    
+    return 'Log monitoring started';
 }
 
-function setupIPCHandlers() {
-    ipcMain.on('ai-open-window', () => createAIWindow());
-    ipcMain.handle('save-script', async (event, content) => {  
-        try {
-            saveScript(content);
-            return 'File saved successfully';
-        } catch (error) {
-            throw new Error(`Save failed: ${error.message}`);
-        }
-    });
-    ipcMain.handle('enable-discord-rpc', () => startDiscordRPC());
-    ipcMain.handle('disable-discord-rpc', () => stopDiscordRPC());
-    ipcMain.handle('check-for-updates', () => checkForUpdates(false));
-    ipcMain.handle('execute-script', handleScriptExecution);
-    ipcMain.handle('get-luau-lsp-status', async () => {
-        try {
-            const result = await updateLuauLSP();
-            return { success: true, version: result.version };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
+function cleanLogLine(line) {
+    if (!line || !line.trim()) return null;
+    
+    let cleaned = line;
+    
+    cleaned = cleaned.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z,\d+\.\d+,[a-f0-9]+,\d+/g, '');
+    
+    cleaned = cleaned.replace(/\[(D?FLog::[^\]]+)\]/g, '');
+    
+    cleaned = cleaned.replace(/\d{1,2}:\d{2}:\d{2} [AP]M/g, '');
+    
+    cleaned = cleaned.replace(/^[,\s]+/, '');
+    
+    return cleaned.trim();
+}
+
+function shouldFilter(text) {
+    if (!text || text.length < 2) return true;
+    
+    const unwantedPatterns = [
+        'active://',
+        'sdp', 'candidate:', 'ice-ufrag:',
+        'o=-', 's=', 't=', 'a=group:',
+        'InputDevice', 'OutputDevice',
+        'Starting log monitoring',
+        'Monitoring new logs'
+    ];
+    
+    return unwantedPatterns.some(pattern => text.includes(pattern));
+}
+
+function stopRobloxLogMonitoring() {
+    if (logMonitoringInterval) {
+        clearInterval(logMonitoringInterval);
+        logMonitoringInterval = null;
+    }
+    isMonitoringLogs = false;
+    return 'Log monitoring stopped';
+}
+
+function stopRobloxLogCapture() {
+    return stopRobloxLogMonitoring();
+}
+
+function findRobloxProcess() {
+    return new Promise((resolve, reject) => {
+        const ps = spawn('ps', ['aux']);
+        let output = '';
+        
+        ps.stdout.on('data', (data) => {
+            output += data.toString();
+        });
+        
+        ps.on('close', (code) => {
+            if (code !== 0) {
+                reject(new Error(`ps process exited with code ${code}`));
+                return;
+            }
+            
+            const lines = output.split('\n');
+            const robloxProcessLine = lines.find(line => 
+                line.includes('RobloxPlayer') && !line.includes('grep')
+            );
+            
+            if (robloxProcessLine) {
+                const pid = robloxProcessLine.trim().split(/\s+/)[1];
+                console.log(`Found RobloxPlayer with PID: ${pid}`);
+                resolve(pid);
+            } else {
+                reject(new Error('No running RobloxPlayer process found'));
+            }
+        });
     });
 }
 
-async function handleScriptExecution(event, script) {
+ipcMain.on('ai-open-window', () => {
+    createAIWindow();
+});
+
+ipcMain.on('save-script', (event, content) => {
+    saveScript(content);
+});
+
+ipcMain.handle('enable-discord-rpc', () => {
+    startDiscordRPC();
+});
+
+ipcMain.handle('disable-discord-rpc', () => {
+    stopDiscordRPC();
+});
+
+ipcMain.handle('execute-script', async (event, script) => {
     if (isExecuting) {
         pendingExecution = script;
         return "Previous execution in progress. This request will be processed next.";
@@ -421,10 +407,32 @@ async function handleScriptExecution(event, script) {
     } finally {
         isExecuting = false;
     }
+});
+
+ipcMain.on('open-roblox-log-window', () => {
+    createRobloxLogWindow();
+});
+
+ipcMain.handle('start-roblox-log-capture', async () => {
+    return startRobloxLogMonitoring();
+});
+
+ipcMain.handle('stop-roblox-log-capture', () => {
+    return stopRobloxLogCapture();
+});
+
+function initialize() {
+    createWindow();
+    checkForUpdates();
+    checkAndStartDiscordRPC();
 }
 
-// Initialize Application
-initialize();
-setupAutoUpdater();
-setupIPCHandlers();
-
+app.whenReady().then(() => {
+    initialize();
+    
+    app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+            initialize();
+        }
+    });
+});

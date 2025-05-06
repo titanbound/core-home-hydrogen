@@ -1,131 +1,794 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Core: Home</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ext-language_tools.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="styles/main.css">
-    <script src="js/editor.js"></script>
-    <script src="js/tabs.js"></script>
-    <script src="js/theme.js"></script>
-    <script src="js/notifications.js"></script>
-    <script src="js/toolbar.js"></script>
-    <script src="js/main.js"></script>
-  </head>
-  <body>
+    <style>
+        html,
+          body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+          }
+    
+          body {
+            display: flex;
+            flex-direction: column;
+            background: #2d2d2d;
+            color: #fff;
+          }
+    
+          .tab-bar {
+            display: flex;
+            background-color: #1a1a1a;
+            padding: 8px;
+            height: 40px;
+            margin-bottom: 0;
+            overflow-x: auto;
+          }
+    
+          .tab {
+            display: flex;
+            align-items: center;
+            height: 36px;
+            flex: 1; 
+            min-width: 100px;
+            max-width: 200px;
+            position: relative;
+            padding: 0 10px;
+            margin-right: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background-color: #222;
+            border-radius: 8px 8px 0 0;
+            font-size: 14px;
+            color: #bbb;
+            user-select: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+          }
+    
+          .tab-close {
+            margin-left: 8px;
+            cursor: pointer;
+            color: #bbb;
+            font-size: 16px;
+          }
+    
+          .tab-close:hover {
+            color: #fff;
+          }
+    
+          .tab.active {
+            background-color: #222;
+            color: #fff;
+            z-index: 2;
+          }
+    
+          .tab-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+    
+          .tab-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+    
+          .tab-add {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-top: 4px;
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+            outline: none;
+            transition: background-color 0.3s ease;
+          }
+    
+          .tab-add:hover {
+            background-color: transparent;
+          }
+    
+          #editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background-color: #1a1a1a;
+          }
+    
+          .editor {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            display: none;
+          }
+    
+          .editor.active {
+            display: block;
+          }
+    
+          .menu {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+          }
+    
+          .link {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+            transition: width 0.2s ease-in;
+            text-decoration: none;
+            color: #fff;
+            background: #2d2d2d;
+            cursor: pointer;
+          }
+    
+          .link:hover {
+            width: 130px;
+            background: #444;
+          }
+    
+          .link-icon {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+          }
+    
+          .link:hover .link-icon {
+            left: 18px;
+          }
+    
+          .link-title {
+            transform: translateX(100%);
+            transition: transform 0.2s ease-in;
+            display: block;
+            text-align: center;
+            text-indent: 28px;
+            width: 100%;
+            opacity: 0;
+          }
+    
+          .link:hover .link-title {
+            transform: translateX(0);
+            opacity: 1;
+          }
+    
+          .notification-container {
+            position: fixed;
+            bottom: 2%;
+            right: 2%;
+            z-index: 1000;
+            max-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+            list-style-type: none;
+            font-family: sans-serif;
+            color: black;
+          }
+    
+          .notification-item {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            border-radius: 6px;
+            background-color: var(--background-color);
+            overflow: hidden;
+            transition: transform 250ms ease;
+          }
+    
+          .notification-item:hover {
+            transform: scale(1.01);
+          }
+    
+          .success {
+            background-color: #7dffbc;
+            color: #047857;
+          }
+    
+          .error {
+            background-color: #ff7e7e;
+            color: #7f1d1d;
+          }
+    
+          .info {
+            background-color: #7eb8ff;
+            color: #1e3a8a;
+          }
+    
+          .warning {
+            background-color: #FF0000;
+            color: #fff;
+          }
+    
+          .notification-item .notification-close {
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 5px;
+            transition: all 250ms;
+          }
+    
+          .notification-close:hover {
+            background-color: rgba(204, 204, 204, 0.45);
+          }
+    
+          .notification-progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 2px;
+            background: currentColor;
+            width: 100%;
+            animation: progressBar 5s linear forwards;
+          }
+    
+          @keyframes progressBar {
+            0% {
+              transform: translateX(0);
+            }
+    
+            100% {
+              transform: translateX(-100%);
+            }
+          }
+    
+          .settings-popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+          }
+    
+          .settings-content {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+            color: #fff;
+          }
+    
+          .theme-selector,
+          .discord-rpc {
+            margin-bottom: 15px;
+          }
+    
+          button {
+            padding: 10px;
+            background-color: #444;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+          }
+    
+          button:hover {
+            background-color: #666;
+          }
+
+          .drag {
+            -webkit-app-region: drag;
+          }
+
+          .no-drag {
+            -webkit-app-region: no-drag;
+          }
+    </style>
+</head>
+
+<body>
     <div class="drag tab-bar">
-      <div class="no-drag tab active" data-tab-id="tab1">
-        <div class="no-drag tab-content">
-          <span class="no-drag tab-title">untitled.lua</span>
-          <span class="no-drag tab-close">&times;</span>
-          <!-- Add close button -->
+        <div class="no-drag tab active" data-tab-id="tab1">
+            <div class="no-drag tab-content">
+                <span class="no-drag tab-title">untitled.lua</span>
+                <span class="no-drag tab-close">&times;</span> <!-- Add close button -->
+            </div>
         </div>
-      </div>
-      <div class="no-drag tab-add">+</div>
+        <div class="no-drag tab-add">+</div>
     </div>
     <div id="editor-container">
-      <div id="editor1" class="no-drag editor active" data-tab-id="tab1"></div>
-      <div id="toolbar" class="toolbar">
-        <div class="toolbar-background"></div>
-        <a class="link" id="execute-btn">
-          <span class="link-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play">
-              <polygon points="6 3 20 12 6 21 6 3" />
-            </svg>
-          </span>
-          <span class="link-title">Execute</span>
-        </a>
-        <a class="link" id="settings-btn">
-          <span class="link-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings-2">
-              <path d="M20 7h-9" />
-              <path d="M14 17H5" />
-              <circle cx="17" cy="17" r="3" />
-              <circle cx="7" cy="7" r="3" />
-            </svg>
-          </span>
-          <span class="link-title">Settings</span>
-        </a>
-        <a class="link" id="save-btn">
-          <span class="link-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder-sync">
-              <path d="M9 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v.5" />
-              <path d="M12 10v4h4" />
-              <path d="m12 14 1.535-1.605a5 5 0 0 1 8 1.5" />
-              <path d="M22 22v-4h-4" />
-              <path d="m22 18-1.535 1.605a5 5 0 0 1-8-1.5" />
-            </svg>
-          </span>
-          <span class="link-title">Save</span>
-        </a>
-        <a class="link" id="ai-window-btn">
-          <span class="link-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bot-icon lucide-bot">
-              <path d="M12 8V4H8" />
-              <rect width="16" height="12" x="4" y="8" rx="2" />
-              <path d="M2 14h2" />
-              <path d="M20 14h2" />
-              <path d="M15 13v2" />
-              <path d="M9 13v2" />
-            </svg>
-          </span>
-          <span class="link-title">Intelligence</span>
-        </a>
-      </div>
-      <style>
+        <div id="editor1" class="no-drag editor active" data-tab-id="tab1"></div>
+        <div id="toolbar" class="toolbar">
+            <div class="toolbar-background"></div>
+            <a class="link" id="execute-btn">
+                <span class="link-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play">
+                        <polygon points="6 3 20 12 6 21 6 3" />
+                    </svg>
+                </span>
+                <span class="link-title">Execute</span>
+            </a>
+            <a class="link" id="settings-btn">
+                <span class="link-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings-2">
+                      <path d="M20 7h-9" />
+                      <path d="M14 17H5" />
+                      <circle cx="17" cy="17" r="3" />
+                      <circle cx="7" cy="7" r="3" />
+                    </svg>
+                  </span>
+                <span class="link-title">Settings</span>
+            </a>
+            <a class="link" id="save-btn">
+                <span class="link-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder-sync">
+                      <path d="M9 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v.5" />
+                      <path d="M12 10v4h4" />
+                      <path d="m12 14 1.535-1.605a5 5 0 0 1 8 1.5" />
+                      <path d="M22 22v-4h-4" />
+                      <path d="m22 18-1.535 1.605a5 5 0 0 1-8-1.5" />
+                    </svg>
+                  </span>
+                <span class="link-title">Save</span>
+            </a>
+            <a class="link" id="ai-window-btn">
+                <span class="link-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bot-icon lucide-bot"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+                </span>
+                <span class="link-title">Intelligence</span>
+            </a>
+            <a class="link" id="roblox-console-btn">
+                <span class="link-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-terminal"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                </span>
+                <span class="link-title">Console</span>
+            </a>
+        </div>
+        
+        <style>
         .toolbar {
-          position: fixed;
-          bottom: 10px;
-          left: 50%;
-          transform: translateX(-50%);
-          display: flex;
-          gap: 10px;
-          z-index: 1000;
-          padding: 10px;
-          cursor: move;
-          user-select: none;
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+            padding: 10px;
+            cursor: move;
+            user-select: none;
         }
-
+        
         .toolbar-background {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: #171717;
-          border-radius: 12px;
-          backdrop-filter: blur(8px);
-          z-index: -1;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(23, 23, 23, 0.9) !important;
+            border-color: rgba(23, 23, 23, 0.9) !important;
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+            z-index: -1;
+            transition: background 0.3s ease, backdrop-filter 0.3s ease;
         }
-
-        .link {
-          position: relative;
-          z-index: 1001;
-          cursor: pointer;
-          -webkit-app-region: no-drag;
+        </style>
+                <script>
+        const toolbar = document.querySelector('#toolbar');
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+        
+        toolbar.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+        
+        function dragStart(e) {
+            if (e.target.closest('.link')) return;
+            
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+            isDragging = true;
         }
-      </style>
+        
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+        
+                xOffset = currentX;
+                yOffset = currentY;
+        
+                setTranslate(currentX, currentY, toolbar);
+            }
+        }
+        
+        function dragEnd() {
+            isDragging = false;
+        }
+        
+        function setTranslate(xPos, yPos, el) {
+            el.style.transform = `translate(${xPos}px, ${yPos}px)`;
+        }
+        </script>
     </div>
     <div id="settings-popup" class="settings-popup">
-      <div class="settings-content">
-        <h3 style="color: #fff; border-bottom: 1px solid #444; padding-bottom: 10px;">Settings</h3>
-        <div class="theme-selector">
-          <label for="theme-toggle" style="color: #bbb;">Select Theme</label>
-          <select id="theme-toggle" style="background-color: #333; color: #fff; border: none; padding: 5px;">
-            <option value="dark">Dark Theme</option>
-            <option value="light">Light Theme</option>
-          </select>
+        <div class="settings-content">
+            <h3 style="color: #fff; border-bottom: 1px solid #444; padding-bottom: 10px;">Settings</h3>
+            <div class="theme-selector">
+                <label for="theme-toggle" style="color: #bbb;">Select Theme</label>
+                <select id="theme-toggle" style="background-color: #333; color: #fff; border: none; padding: 5px;">
+                    <option value="dark">Dark Theme</option>
+                    <option value="light">Light Theme</option>
+                </select>
+            </div>
+            <div class="discord-rpc">
+                <label for="discord-rpc" style="color: #bbb;">Enable Discord RPC</label>
+                <input type="checkbox" id="discord-rpc" style="accent-color: #555;">
+            </div>
+            <button id="close-settings" style="width: 100%; padding: 10px; background-color: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; margin-top: 15px;">Close</button>
         </div>
-        <div class="discord-rpc">
-          <label for="discord-rpc" style="color: #bbb;">Enable Discord RPC</label>
-          <input type="checkbox" id="discord-rpc" style="accent-color: #555;">
-        </div>
-        <button id="close-settings" style="width: 100%; padding: 10px; background-color: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; margin-top: 15px;">Close</button>
-      </div>
     </div>
     <ul class="notification-container" id="notifications"></ul>
-  </body>
+    <script>
+        let editors = {};
+          let tabCounter = 1;
+          let activeTabId = 'tab1';
+          
+          document.addEventListener("DOMContentLoaded", () => {
+            initEditor('tab1', 'editor1');
+            setupTabEvents();
+            const savedTheme = localStorage.getItem('theme') || 'dark'; 
+            setTheme(savedTheme); 
+          });
+        
+          function initEditor(tabId, editorId) {
+            const editor = ace.edit(editorId);
+            editor.setTheme("ace/theme/twilight");
+            editor.getSession().setMode("ace/mode/lua");
+            editor.setShowPrintMargin(false);
+            editors[tabId] = editor;
+            applyCustomEditorStyles();
+          }
+        
+          function applyCustomEditorStyles() {
+            var style = document.createElement("style");
+            style.textContent = `
+              .ace_editor { background-color: #1a1a1a !important; color: #fff !important; }
+              .ace_gutter { background-color: #1a1a1a !important; color: #fff !important; }
+              .ace_cursor { border-left: 2px solid #fff !important; }
+              .ace_text-input { color: #1a1a1a !important; }
+              .ace_gutter-cell { background-color: #1a1a1a !important; color: #fff !important; }
+            `;
+            document.head.appendChild(style);
+          }
+        
+          function showNotification(message, type) {
+            const notifications = document.getElementById('notifications');
+            const item = document.createElement('li');
+            item.className = `notification-item ${type}`;
+            item.innerHTML = `
+              <span>${message}</span>
+              <span class="notification-close"></span>
+              <div class="notification-progress-bar"></div>
+            `;
+            item.querySelector('.notification-close').addEventListener('click', () => item.remove());
+            notifications.appendChild(item);
+            setTimeout(() => item.remove(), 5000);
+          }
+        
+          function setupTabEvents() {
+            document.querySelector('.tab-add').addEventListener('click', addNewTab);
+            document.getElementById('save-btn').addEventListener('click', saveFile);
+        
+            document.querySelector('.tab-bar').addEventListener('click', (e) => {
+              const tab = e.target.closest('.tab');
+              if (tab && tab.classList.contains('tab')) {
+                activateTab(tab.dataset.tabId);
+              }
+            });
+        
+            document.querySelector('.tab-bar').addEventListener('click', (e) => {
+              if (e.target.classList.contains('tab-close')) {
+                const tab = e.target.closest('.tab');
+                closeTab(tab.dataset.tabId);
+              }
+            });
+          }
+        
+          function addNewTab() {
+            tabCounter++;
+            const newTabId = `tab${tabCounter}`;
+            const newEditorId = `editor${tabCounter}`;
+            const tabTemplate = `
+              <div class="no-drag tab" data-tab-id="${newTabId}">
+                <div class="no-drag tab-content">
+                  <span class="tab-title">untitled${tabCounter}.lua</span>
+                  <span class="no-drag tab-close">&times;</span>  <!-- Fixed: Added &times; for the close icon -->
+                </div>
+              </div>`;
+            document.querySelector('.tab-add').insertAdjacentHTML('beforebegin', tabTemplate);
+            document.getElementById('editor-container').insertAdjacentHTML('afterbegin', `
+              <div id="${newEditorId}" class="editor" data-tab-id="${newTabId}"></div>`);
+            initEditor(newTabId, newEditorId);
+            activateTab(newTabId);
+            applyTheme(localStorage.getItem('theme') || 'dark'); 
+          }
+        
+          function activateTab(tabId) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.editor').forEach(editor => editor.classList.remove('active'));
+            document.querySelector(`.tab[data-tab-id="${tabId}"]`).classList.add('active');
+            document.querySelector(`.editor[data-tab-id="${tabId}"]`).classList.add('active');
+            activeTabId = tabId;
+          }
+        
+          function closeTab(tabId) {
+            const tabs = document.querySelectorAll('.tab');
+            if (tabs.length <= 1) {
+              showNotification('You must have at least one tab open.', 'warning');
+              return;
+            }
+            const tab = document.querySelector(`.tab[data-tab-id="${tabId}"]`);
+            const editor = document.querySelector(`.editor[data-tab-id="${tabId}"]`);
+            if (tab.classList.contains('active')) {
+              const prevTab = tab.previousElementSibling || tab.nextElementSibling;
+              if (prevTab) {
+                activateTab(prevTab.dataset.tabId);
+              }
+            }
+            tab.remove();
+            editor.remove();
+            delete editors[tabId];
+          }
+        
+          function saveFile() {
+            if (editors[activeTabId]) {
+                let content = editors[activeTabId].getValue().trim();
+                if (!content) {
+                    showNotification('Save failed: File is empty.', 'error');
+                } else {
+                    showNotification('File saved successfully.', 'success');
+                    try {
+                        window.api.saveScript(content);
+                    } catch {
+                        console.log("API not available, would save content:", content);
+                    }
+                }
+            } else {
+                console.error("Active editor is not initialized yet.");
+            }
+        }
+        
+          document.getElementById('settings-btn').addEventListener('click', () => {
+            document.getElementById('settings-popup').style.display = 'flex';
+          });
+          document.getElementById('close-settings').addEventListener('click', () => {
+            document.getElementById('settings-popup').style.display = 'none';
+          });
+        
+          document.getElementById('discord-rpc').addEventListener('change', (event) => {
+            const isChecked = event.target.checked;
+            if (isChecked) {
+              window.api.enableDiscordRpc()
+                  .catch(console.error);
+            } else {
+              window.api.disableDiscordRpc()
+                  .catch(console.error);
+            }
+          });
+        
+          document.getElementById('theme-toggle').addEventListener('change', (e) => {
+            const selectedTheme = e.target.value;
+            localStorage.setItem('theme', selectedTheme);
+            applyTheme(selectedTheme);
+          });
+        
+          function applyTheme(theme) {
+            setTheme(theme); 
+          }
+        
+function setTheme(theme) {
+  const body = document.body;
+  const editorContainer = document.getElementById('editor-container');
+  const tabBar = document.querySelector('.tab-bar');
+  const tabs = document.querySelectorAll('.tab');
+  const buttons = document.querySelectorAll('.link');
+  const svgIcons = document.querySelectorAll('.link svg');
+  const gutterCells = document.querySelectorAll('.ace_gutter-cell');
+  const settingsContent = document.querySelector('.settings-content');
+  const themeSelector = document.getElementById('theme-toggle');
+  const toolbarBackground = document.querySelector('.toolbar-background');
+  themeSelector.value = theme;
+  
+  if (theme === 'light') {
+    body.style.backgroundColor = '#ffffff';
+    body.style.color = '#000000';
+    tabBar.style.backgroundColor = '#f0f0f0';
+    editorContainer.style.backgroundColor = '#f9f9f9';
+    
+    toolbarBackground.style.background = 'rgba(255, 255, 255, 0.9)';
+    toolbarBackground.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+
+    settingsContent.style.backgroundColor = '#ffffff';
+    settingsContent.style.color = '#000000';
+    document.querySelector('.settings-content h3').style.color = '#000000';
+    document.querySelector('.settings-content h3').style.borderBottom = '1px solid #ddd';
+    document.querySelectorAll('.settings-content label').forEach(label => {
+      label.style.color = '#333';
+    });
+    document.getElementById('close-settings').style.backgroundColor = '#e0e0e0';
+    document.getElementById('close-settings').style.color = '#000000';
+    document.getElementById('theme-toggle').style.backgroundColor = '#f0f0f0';
+    document.getElementById('theme-toggle').style.color = '#000000';
+
+    tabs.forEach(tab => {
+      tab.style.backgroundColor = '#fff';
+      tab.style.color = '#000';
+    });
+
+    gutterCells.forEach(cell => {
+      cell.style.backgroundColor = '#f9f9f9';
+      cell.style.color = '#000';
+    });
+
+    buttons.forEach(button => {
+      button.style.backgroundColor = '#ededed';
+      button.style.color = '#000';
+    });
+
+    svgIcons.forEach(svg => {
+      svg.style.fill = 'none';
+      svg.style.stroke = '#333';
+      svg.style.strokeWidth = '2px';
+    });
+
+    const editorStyle = document.createElement("style");
+    editorStyle.textContent = `
+      .ace_editor { background-color: #f9f9f9 !important; color: #000 !important; }
+      .ace_gutter { background-color: #f9f9f9 !important; color: #000 !important; }
+      .ace_cursor { border-left: 2px solid #000 !important; }
+      .ace_gutter-cell { background-color: #f9f9f9 !important; color: #000 !important; }
+    `;
+    document.head.appendChild(editorStyle);
+  } else {
+
+    toolbarBackground.style.background = 'rgba(23, 23, 23, 0.9)';
+    
+    body.style.backgroundColor = '#2d2d2d';
+    body.style.color = '#fff';
+    tabBar.style.backgroundColor = '#1a1a1a';
+    editorContainer.style.backgroundColor = '#1a1a1a';
+    
+    settingsContent.style.backgroundColor = '#2d2d2d';
+    settingsContent.style.color = '#fff';
+    document.querySelector('.settings-content h3').style.color = '#fff';
+    document.querySelector('.settings-content h3').style.borderBottom = '1px solid #444';
+    document.querySelectorAll('.settings-content label').forEach(label => {
+      label.style.color = '#bbb';
+    });
+    document.getElementById('close-settings').style.backgroundColor = '#444';
+    document.getElementById('close-settings').style.color = '#fff';
+    document.getElementById('theme-toggle').style.backgroundColor = '#333';
+    document.getElementById('theme-toggle').style.color = '#fff';
+
+    tabs.forEach(tab => {
+      tab.style.backgroundColor = '#222';
+      tab.style.color = '#fff';
+    });
+    
+    // Update rename input styles for dark theme
+    const renameInputs = document.querySelectorAll('.rename-input');
+    if (renameInputs.length > 0) {
+      renameInputs.forEach(input => {
+        input.style.backgroundColor = '#333';
+        input.style.color = '#fff';
+        input.style.border = '1px solid #555';
+      });
+    }
+
+    gutterCells.forEach(cell => {
+      cell.style.backgroundColor = '#2d2d2d';
+      cell.style.color = '#fff';
+    });
+
+    buttons.forEach(button => {
+      button.style.backgroundColor = '#2d2d2d';
+      button.style.color = '#fff';
+    });
+
+    svgIcons.forEach(svg => {
+      svg.style.fill = 'none';
+      svg.style.stroke = '#fff';
+      svg.style.strokeWidth = '2px';
+    });
+
+    const editorStyle = document.createElement("style");
+    editorStyle.textContent = `
+      .ace_editor { background-color: #1a1a1a !important; color: #fff !important; }
+      .ace_gutter { background-color: #1a1a1a !important; color: #fff !important; }
+      .ace_cursor { border-left: 2px solid #fff !important; }
+      .ace_text-input { color: #1a1a1a !important; }
+      .ace_gutter-cell { background-color: #1a1a1a !important; color: #fff !important; }
+    `;
+    document.head.appendChild(editorStyle);
+  }
+}
+
+document.getElementById('execute-btn').addEventListener('click', () => {
+    function executeCode() {
+        const code = editors[activeTabId]?.getValue().trim();
+        if (!code) {
+            showNotification('Error: Code is empty!', 'error');
+        } else {
+            try {
+                window.api.executeScript(code, false)
+                    .then(result => {
+                        showNotification(result, result.includes('failed') ? 'error' : 'success');
+                    })
+                    .catch(error => {
+                        showNotification('Execution failed: ' + error, 'error');
+                    });
+            } catch {
+                console.log("Electron API not available, would execute code:", code);
+            }
+        }
+    }
+    executeCode();
+});
+    
+    document.getElementById('ai-window-btn').addEventListener('click', () => {
+        window.api.aiOpenWindow()
+            .catch(error => {
+                showNotification('Failed to open AI window: ' + error, 'error');
+            });
+    });
+              
+          document.getElementById('roblox-console-btn').addEventListener('click', () => {
+            try {
+              window.robloxLog.openLogWindow();
+            } catch {
+              console.log("Roblox Log API not available");
+            }
+          });
+
+    </script>
+</body>
+
 </html>

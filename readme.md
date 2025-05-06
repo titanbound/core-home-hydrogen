@@ -50,7 +50,7 @@ The built application will be available in the `out` directory.
 - Discord Rich Presence integration
 - Auto-save functionality
 - Automatic updates
-- Luau LSP support
+- Console For Roblox
 
 ## Workspace
 

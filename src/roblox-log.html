@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roblox Log Console</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            background: #2d2d2d;
+            color: #fff;
+            -webkit-app-region: drag; 
+        }
+        
+        .console {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14px;
+            background-color: #1a1a1a;
+            -webkit-app-region: drag;
+        }
+        
+        .toolbar {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+            padding: 10px;
+            -webkit-app-region: no-drag; 
+        }
+        
+        .log-entry {
+            margin-bottom: 4px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .message {
+            color: #e0e0e0;
+            white-space: pre-wrap;
+        }
+        
+        .error { color: #f44336; }
+        .drag { -webkit-app-region: drag; }
+        .drag { -webkit-app-region: drag; }
+        .no-drag { -webkit-app-region: no-drag; }
+        
+        .toolbar {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+            padding: 10px;
+        }
+        
+        .toolbar-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(23, 23, 23, 0.9);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+            z-index: -1;
+        }
+        
+        .link {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            background: #2d2d2d;
+            cursor: pointer;
+            color: #fff;
+            -webkit-app-region: no-drag; 
+        }
+    </style>
+</head>
+<body class="drag">
+    <div class="console no-drag" id="logConsole"></div>
+    <div id="toolbar" class="toolbar">
+        <a class="link no-drag" id="clearBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                <line x1="10" x2="10" y1="11" y2="17"></line>
+                <line x1="14" x2="14" y1="11" y2="17"></line>
+            </svg>
+        </a>
+    </div>
+    
+    <script>
+        const clearBtn = document.getElementById('clearBtn');
+        const logConsole = document.getElementById('logConsole');
+        
+        let logEntries = [];
+        const MAX_LOGS = 50;
+        
+        clearBtn.addEventListener('click', () => {
+            logEntries = [];
+            logConsole.innerHTML = '';
+            window.robloxLogAPI.clearLogs(); // Add this to make it functional
+        });
+        
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const result = await window.robloxLogAPI.startCapture();
+            } catch (error) {
+            }
+        });
+        
+        window.robloxLogAPI.onLog((data) => {
+            const { message } = data;
+            
+            const flogMatch = message.match(/\[FLog::Output\](.*)/);
+            const logMessage = flogMatch ? flogMatch[1].trim() : message;
+            
+            logEntries.push({ message: logMessage });
+            if (logEntries.length > MAX_LOGS) {
+                logEntries.shift();
+            }
+            
+            renderLogs();
+        });
+        
+        function renderLogs() {
+            logConsole.innerHTML = '';
+            
+            logEntries.forEach(entry => {
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                
+                const message = document.createElement('span');
+                message.className = 'message';
+                message.textContent = entry.message;
+                
+                logEntry.appendChild(message);
+                logConsole.appendChild(logEntry);
+            });
+            
+            logConsole.scrollTop = logConsole.scrollHeight;
+        }
+    </script>
+</body>
+</html>
